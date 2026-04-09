@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoM — Minutes of Meeting</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body data-theme="soft">
+
+  <!-- ── Mobile hamburger ── -->
+  <button id="hamburger" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
+
+  <!-- ================================================================
+       SIDEBAR
+       ================================================================ -->
+  <aside id="sidebar">
+
+    <!-- Top: logo + new button -->
+    <div class="sidebar-top">
+      <div class="app-title">📝 MoM</div>
+      <button id="new-btn" onclick="createNewMoM()">+ New MoM</button>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <input type="text"
+             id="search"
+             placeholder="🔍 Search meetings…"
+             oninput="filterList()"
+             autocomplete="off">
+    </div>
+
+    <!-- Meeting list -->
+    <div id="mom-list"></div>
+
+    <!-- Bottom actions -->
+    <div class="sidebar-bottom">
+      <div class="sidebar-row">
+        <button class="sidebar-btn" onclick="exportJSON()">⬇ Export</button>
+        <button class="sidebar-btn" onclick="document.getElementById('import-file').click()">⬆ Import</button>
+      </div>
+      <div class="sidebar-row">
+        <button class="sidebar-btn" onclick="cycleTheme()">🎨 Theme</button>
+        <button class="sidebar-btn" onclick="showShortcuts()">⌨ Help</button>
+      </div>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input type="file" id="import-file" accept=".json" onchange="importJSON(event)">
+  </aside>
+
+  <!-- Mobile sidebar backdrop -->
+  <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+  <!-- ================================================================
+       EDITOR PANEL
+       ================================================================ -->
+  <main id="editor-panel">
+
+    <!-- Empty state -->
+    <div id="empty-state">
+      <div>
+        <div class="empty-icon">📋</div>
+        Select a meeting from the list or create a new one with<br>
+        <strong>+ New MoM</strong>
+      </div>
+    </div>
+
+    <!-- Active MoM editor (hidden until a MoM is selected) -->
+    <div id="editor-wrap" style="display:none;">
+
+      <!-- Export / Share toolbar -->
+      <div class="editor-toolbar">
+        <button class="toolbar-btn" onclick="exportPDF()" title="Save as PDF via browser print dialog">
+          🖨 PDF
+        </button>
+        <button class="toolbar-btn toolbar-btn-accent" onclick="copyForEmail()" title="Copy rich HTML — paste directly into Gmail or Outlook">
+          📋 Copy for Email
+        </button>
+        <button class="toolbar-btn" onclick="copyPlainText()" title="Copy plain text — works in any email client">
+          📄 Plain Text
+        </button>
+      </div>
+
+      <!-- Title + saved indicator -->
+      <div class="editor-header">
+        <input type="text"
+               id="title-input"
+               placeholder="Meeting Title"
+               oninput="handleChange('title', this.value)"
+               autocomplete="off">
+        <span id="saved-indicator">Saved ✓</span>
+      </div>
+
+      <!-- Date / Time / Attendees row -->
+      <div class="row-3">
+        <!-- Custom date picker -->
+        <div class="field-group">
+          <div class="field-label">Date</div>
+          <div class="dp-wrap" id="dp-date">
+            <button class="dp-trigger" onclick="dpOpen('dp-date')">
+              <span class="dp-val dp-placeholder" id="dp-date-val">Select date</span>
+              <span class="dp-chevron">⌄</span>
+            </button>
+            <div class="dp-popup hidden" id="dp-date-pop"></div>
+          </div>
+        </div>
+
+        <!-- Custom time picker -->
+        <div class="field-group">
+          <div class="field-label">Time</div>
+          <div class="tp-wrap" id="tp-time">
+            <button class="tp-trigger" onclick="tpOpen('tp-time')">
+              <span class="tp-val dp-placeholder" id="tp-time-val">Select time</span>
+              <span class="dp-chevron">⌄</span>
+            </button>
+            <div class="tp-popup hidden" id="tp-time-pop"></div>
+          </div>
+        </div>
+        <div class="field-group wide">
+          <div class="field-label">Attendees</div>
+          <input type="text"
+                 id="attendees-input"
+                 placeholder="e.g. Prabu, Anna, Marcus"
+                 oninput="handleChange('attendees', this.value)"
+                 autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Discussion Notes -->
+      <div class="field-group">
+        <div class="field-label">Discussion Notes</div>
+        <textarea id="discussion-input"
+                  rows="8"
+                  placeholder="What was discussed, decisions made, topics covered…"
+                  oninput="handleChange('discussion', this.value)"></textarea>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Action Items -->
+      <div class="field-group">
+        <div class="field-label">Action Items</div>
+        <div class="action-header">
+          <span>Task</span>
+          <span class="col-owner">Owner</span>
+          <span>Due Date</span>
+          <span></span>
+        </div>
+        <div id="actions-list"></div>
+        <button id="add-action-btn" onclick="addAction()">+ Add Action Item</button>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Follow-up -->
+      <div class="row-3">
+        <!-- Custom follow-up date picker -->
+        <div class="field-group">
+          <div class="field-label">Next Follow-up Date</div>
+          <div class="dp-wrap" id="dp-followup">
+            <button class="dp-trigger" onclick="dpOpen('dp-followup')">
+              <span class="dp-val dp-placeholder" id="dp-followup-val">Select date</span>
+              <span class="dp-chevron">⌄</span>
+            </button>
+            <div class="dp-popup hidden" id="dp-followup-pop"></div>
+          </div>
+        </div>
+        <div class="field-group wide">
+          <div class="field-label">Follow-up Notes</div>
+          <textarea id="followup-notes-input"
+                    rows="2"
+                    placeholder="Topics to revisit, questions to answer…"
+                    oninput="handleChange('followUpNotes', this.value)"></textarea>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <!-- Delete -->
+      <button id="delete-btn" onclick="confirmDelete()">🗑 Delete MoM</button>
+
+    </div><!-- /#editor-wrap -->
+  </main>
+
+  <!-- ================================================================
+       UNDO BANNER
+       ================================================================ -->
+  <div id="undo-banner">
+    Meeting deleted.
+    <button id="undo-btn" onclick="undoDelete()">Undo</button>
+  </div>
+
+  <!-- ================================================================
+       MODALS / OVERLAYS
+       ================================================================ -->
+
+  <!-- Delete confirmation -->
+  <div id="delete-overlay" class="overlay hidden">
+    <div class="modal">
+      <h3>Delete this MoM?</h3>
+      <p>The meeting record will be removed. You can undo within 5 seconds after deletion.</p>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeOverlay('delete-overlay')">Cancel</button>
+        <button class="modal-btn danger"  onclick="deleteMoM()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import preview -->
+  <div id="import-overlay" class="overlay hidden">
+    <div class="modal">
+      <h3>Import MoM Records</h3>
+      <div id="import-preview"></div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel"  onclick="closeOverlay('import-overlay')">Cancel</button>
+        <button class="modal-btn primary" onclick="confirmImport()">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard shortcuts -->
+  <div id="shortcuts-overlay" class="overlay hidden">
+    <div class="modal shortcuts-modal">
+      <h3>Keyboard Shortcuts</h3>
+      <table class="shortcuts-table">
+        <tbody>
+          <tr>
+            <td class="key-cell"><span class="key-badge">N</span></td>
+            <td>New MoM (when not typing)</td>
+          </tr>
+          <tr>
+            <td class="key-cell"><span class="key-badge">Esc</span></td>
+            <td>Close overlay / deselect</td>
+          </tr>
+          <tr>
+            <td class="key-cell"><span class="key-badge">⌘ / Ctrl + F</span></td>
+            <td>Focus search box</td>
+          </tr>
+          <tr>
+            <td class="key-cell"><span class="key-badge">D</span></td>
+            <td>Export / download JSON</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeOverlay('shortcuts-overlay')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print view — invisible normally, shown only during window.print() -->
+  <div id="print-view"></div>
+
+  <!-- Copy / action toast notification -->
+  <div id="copy-toast" class="copy-toast"></div>
+
+  <!-- ================================================================
+       SCRIPTS
+       ================================================================ -->
+  <script src="app.js"></script>
+
+</body>
+</html>
