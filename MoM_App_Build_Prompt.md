@@ -10,7 +10,7 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 
 ---
 
-## Layout — 3 panel design (inspired by Apple Notes / Mind Journal)
+## Layout — sidebar + document workspace
 
 ```
 ┌─────────────────┬──────────────────────────────────────┐
@@ -18,7 +18,8 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 │                 │                                      │
 │  [+ New MoM]    │  Meeting Title                       │
 │                 │  Date & Time   Attendees             │
-│  🔍 Search      │                                      │
+│  🔍 Search      │  PDF / Copy for Email / Plain Text   │
+│  [All|Followup] │                                      │
 │                 │  Discussion Notes (big textarea)     │
 │  ─────────────  │                                      │
 │  Apr 9 · Sprint │  Action Items                        │
@@ -31,8 +32,8 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 └─────────────────┴──────────────────────────────────────┘
 ```
 
-- Left sidebar: fixed width ~260px, scrollable MoM list, search box at top, Export/Import/Theme at bottom
-- Right panel: the active MoM editor, scrollable
+- Left sidebar: fixed width ~260px, scrollable meeting list, search box at top, list-mode toggle under search, Export/Import/Theme/Help at bottom
+- Right panel: the active MoM editor as a document-style workspace, scrollable
 - Responsive: on mobile, sidebar collapses and editor takes full width
 
 ---
@@ -40,12 +41,12 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 ## MoM Editor fields
 
 1. `Meeting Title` — text input, large, prominent at top
-2. `Date` — date input, auto-filled to today
-3. `Time` — time input, auto-filled to current time
+2. `Date` — custom date picker, auto-filled to today
+3. `Time` — custom time picker, auto-filled to current time
 4. `Attendees` — single text input, comma-separated names
 5. `Discussion Notes` — large textarea, min 6 rows, grows with content
-6. `Action Items` — dynamic rows, each row has: Task (text) + Owner (text) + Due Date (date) + Delete button. A `+ Add Action Item` button appends a new empty row
-7. `Next Follow-up` — date input
+6. `Action Items` — dynamic rows, each row has: Task (text) + Owner (text) + Due Date (custom date picker) + Delete button. A `+ Add Action Item` button appends a new empty row
+7. `Next Follow-up` — custom date picker
 8. `Follow-up Notes` — small textarea, 2 rows
 
 ---
@@ -56,12 +57,19 @@ Save to localStorage on every keystroke / change event. Never show a manual save
 
 ---
 
-## MoM list in sidebar
+## Sidebar list modes
 
-Each item shows:
-- Meeting title (bold)
-- Date + time (muted, small)
-- First 60 characters of discussion notes (muted preview)
+The sidebar supports two modes:
+
+1. `All Meetings`
+   - Shows all meeting records
+   - Each item shows title, date/time, and discussion preview
+
+2. `Follow-ups`
+   - Shows only meetings with `nextFollowUp`
+   - Sorted by follow-up date ascending
+   - Grouped into `Overdue`, `Today`, and `Upcoming`
+   - Each item shows title, follow-up date, and optional follow-up notes preview
 
 Clicking an item loads it into the editor. Active item is highlighted.
 
@@ -85,8 +93,9 @@ Clicking an item loads it into the editor. Active item is highlighted.
 ## Search
 
 - Search box in sidebar filters the list in real time
-- Matches against title, attendees, discussion notes
+- Matches against title, attendees, discussion notes, and follow-up notes
 - No results state: show `No meetings found`
+- In follow-up mode with no dated items, show `No follow-ups scheduled`
 
 ---
 
@@ -104,6 +113,15 @@ Clicking an item loads it into the editor. Active item is highlighted.
 - Show a review step: `Found X meetings. Y new, Z will replace existing.`
 - Confirm button applies the import
 - Merge by `id` — new records added, existing records replaced
+
+---
+
+## PDF / Copy actions
+
+- Add toolbar actions at the top of the editor:
+  - `PDF` — opens browser print flow using a print-friendly document layout
+  - `Copy for Email` — copies rich HTML suitable for Gmail or Outlook
+  - `Plain Text` — copies a plain text meeting summary
 
 ---
 
@@ -136,16 +154,16 @@ Clicking an item loads it into the editor. Active item is highlighted.
 | `mom_records` | Array of all MoM objects |
 | `mom_theme` | Active theme name |
 | `mom_active_id` | Last opened MoM id |
+| `mom_list_mode` | Current sidebar list mode |
 
 ---
 
-## Themes — 3 options
+## Themes — 2 options
 
-1. `Light` — white sidebar, white editor, dark text
-2. `Dark` — dark gray sidebar (`#1e1e2e`), darker editor (`#13131f`), light text
-3. `Soft Gray` — default, warm off-white (`#f5f4f0`), muted tones, easy on eyes
+1. `Word` — default theme, inspired by Microsoft Word with a white document page, quiet gray chrome, and Office-style blue accents
+2. `Dark` — dark workspace variant with the same structure and interactions
 
-Theme toggle button in sidebar bottom. Cycles through the 3 themes. Saved to localStorage.
+Theme toggle button in sidebar bottom. Cycles through the 2 themes. Saved to localStorage.
 
 ---
 
@@ -158,7 +176,7 @@ Theme toggle button in sidebar bottom. Cycles through the 3 themes. Saved to loc
 | `Cmd/Ctrl + F` | Focus search box |
 | `D` | Download / export JSON (when not typing) |
 
-Show a `?` help button in the sidebar that shows a shortcuts overlay.
+Show a `Help` button in the sidebar that opens a shortcuts overlay.
 
 ---
 
@@ -172,14 +190,12 @@ When no MoM exists or none is selected, show a centered message in the editor pa
 
 ## Design principles
 
-- Flat, minimal, calm — Apple Notes / Notion feel
-- No gradients, no heavy shadows
-- Font: `system-ui` or `-apple-system`
-- Sidebar background slightly darker than editor
-- Active MoM in list: left border accent (blue), subtle background highlight
-- Action item rows: clean table-like layout with thin borders
-- All inputs: borderless or minimal border, focus ring only on active
-- Spacing: generous padding, breathable layout
+- Main theme direction: document workspace with polished modern chrome
+- Default feeling should be familiar to office users, especially in the `Word` theme
+- Keep the editor readable and page-like rather than full-width edge-to-edge
+- Use subtle shadows, practical borders, and strong readability
+- Preserve the custom sidebar and follow-up workflow
+- Active items and focus states should use clear blue accents
 - Mobile: sidebar hidden by default, hamburger menu reveals it
 
 ---

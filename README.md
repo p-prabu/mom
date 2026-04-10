@@ -8,11 +8,15 @@ MoM is a lightweight Minutes of Meeting web app built with plain HTML, CSS, and 
 - Edit meeting title, date, time, attendees, discussion notes, and follow-up notes
 - Add and remove action items with task, owner, and due date
 - Auto-save all changes to `localStorage`
-- Search meetings by title, attendees, or discussion notes
+- Search meetings by title, attendees, discussion notes, and follow-up notes
+- Switch the sidebar between `All Meetings` and `Follow-ups`
+- View follow-ups grouped by `Overdue`, `Today`, and `Upcoming`
 - Export all meeting records as JSON
 - Import meeting records from JSON with preview and merge behavior
+- Export the current meeting as a printable PDF via the browser print flow
+- Copy the current meeting as rich email HTML or plain text
 - Delete meetings with undo support
-- Switch between `soft`, `light`, and `dark` themes
+- Switch between `word` and `dark` themes
 - Use keyboard shortcuts for common actions
 - Responsive layout with a collapsible sidebar on mobile
 - Custom date and time pickers in the browser UI
@@ -31,6 +35,7 @@ The app stores all meeting records locally in the browser using these `localStor
 - `mom_records`
 - `mom_theme`
 - `mom_active_id`
+- `mom_list_mode`
 
 This means the app works offline and does not require a server.
 
@@ -67,4 +72,6 @@ Each meeting record includes:
 
 - Data is stored per browser on the local machine
 - Import/export is the current backup and transfer mechanism
+- PDF export uses the browser print dialog with a print-optimized document layout
+- The default theme is `word`, with `dark` as the second theme option
 - The app is intentionally framework-free and simple to open, edit, and extend

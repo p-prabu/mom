@@ -10,24 +10,32 @@
 // ============================================================
 let records    = [];
 let activeId   = null;
-let theme      = 'soft';
+let theme      = 'word';
+let listMode   = 'all';
 let saveTimer  = null;
 let undoTimer  = null;
 let deletedMoM = null;
 let importBuf  = null;
 
-const THEMES = ['soft', 'light', 'dark'];
+const THEMES = ['word', 'dark'];
 
 // ============================================================
 // INIT
 // ============================================================
 function init() {
   records  = JSON.parse(localStorage.getItem('mom_records') || '[]');
-  theme    = localStorage.getItem('mom_theme')     || 'soft';
+  theme    = localStorage.getItem('mom_theme')     || 'word';
   activeId = localStorage.getItem('mom_active_id') || null;
+  listMode = localStorage.getItem('mom_list_mode') || 'all';
+
+  if (!THEMES.includes(theme)) {
+    theme = 'word';
+    localStorage.setItem('mom_theme', theme);
+  }
 
   applyTheme();
   setupDatePickers();
+  syncListModeUI();
   renderList();
 
   if (activeId && records.find(r => r.id === activeId)) {
@@ -70,6 +78,11 @@ function todayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function todayDateLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function currentTime() {
   const d = new Date();
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -85,6 +98,22 @@ function formatDate(d) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun',
                   'Jul','Aug','Sep','Oct','Nov','Dec'];
   return `${months[parseInt(m, 10) - 1]} ${parseInt(day, 10)}`;
+}
+
+function followUpStatus(dateStr) {
+  if (!dateStr) return '';
+  const today = todayDateLocal();
+  if (dateStr < today) return 'overdue';
+  if (dateStr === today) return 'today';
+  return 'upcoming';
+}
+
+function followUpStatusLabel(status) {
+  return ({
+    overdue: 'Overdue',
+    today: 'Today',
+    upcoming: 'Upcoming'
+  })[status] || '';
 }
 
 // ============================================================
@@ -121,8 +150,7 @@ function closeAllPickers() {
     .forEach(el => el.classList.add('hidden'));
 }
 
-// ── Position popup using fixed viewport coordinates ──
-// (popup is position:fixed so it escapes overflow:auto ancestors)
+// ── Position popup anchored to the trigger while staying on-screen ──
 function positionPopup(wrapId, popEl) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;
@@ -132,22 +160,36 @@ function positionPopup(wrapId, popEl) {
   const popH  = popEl.offsetHeight || 300;
   const vw    = window.innerWidth;
   const vh    = window.innerHeight;
-  const GAP   = 6;
+  const GAP   = 8;
+  const EDGE  = 10;
+
+  const spaceBelow = vh - rect.bottom - EDGE;
+  const spaceAbove = rect.top - EDGE;
 
   // Default: open below the trigger
   let top  = rect.bottom + GAP;
   let left = rect.left;
 
-  // Flip above if not enough space below
-  if (top + popH > vh - 8) top = rect.top - popH - GAP;
+  // Prefer below; flip only when above has clearly more room.
+  if (spaceBelow < popH && spaceAbove > spaceBelow) {
+    top = rect.top - popH - GAP;
+  }
 
-  // Keep within right edge
-  if (left + popW > vw - 8) left = vw - popW - 8;
+  // Keep within viewport if neither side fully fits.
+  top = Math.min(top, vh - popH - EDGE);
+  top = Math.max(EDGE, top);
+
+  // If there isn't enough space to the right, align the popup's right edge
+  // with the trigger so it still feels attached to the field.
+  if (left + popW > vw - EDGE) left = rect.right - popW;
+
+  // Keep within right edge after alignment adjustment
+  if (left + popW > vw - EDGE) left = vw - popW - EDGE;
 
   // Keep within left edge
-  if (left < 8) left = 8;
+  if (left < EDGE) left = EDGE;
 
-  popEl.style.top  = `${Math.max(8, top)}px`;
+  popEl.style.top  = `${top}px`;
   popEl.style.left = `${left}px`;
 }
 
@@ -549,6 +591,54 @@ function filterList() {
   renderList(q);
 }
 
+function setListMode(mode) {
+  if (!['all', 'followups'].includes(mode) || listMode === mode) return;
+  listMode = mode;
+  localStorage.setItem('mom_list_mode', listMode);
+  syncListModeUI();
+  renderList(document.getElementById('search').value.toLowerCase().trim());
+}
+
+function syncListModeUI() {
+  const allBtn = document.getElementById('list-mode-all');
+  const followBtn = document.getElementById('list-mode-followups');
+  if (!allBtn || !followBtn) return;
+  allBtn.classList.toggle('active', listMode === 'all');
+  followBtn.classList.toggle('active', listMode === 'followups');
+}
+
+function matchesListQuery(mom, query) {
+  if (!query) return true;
+  return [
+    mom.title,
+    mom.attendees,
+    mom.discussion,
+    mom.followUpNotes
+  ].some(value => (value || '').toLowerCase().includes(query));
+}
+
+function buildDefaultListItem(mom) {
+  const preview = (mom.discussion || '').slice(0, 60);
+  return `
+    <div class="mom-item-title">${esc(mom.title || 'Untitled Meeting')}</div>
+    <div class="mom-item-meta">${formatDate(mom.date)}${mom.time ? ' · ' + mom.time : ''}</div>
+    ${preview ? `<div class="mom-item-preview">${esc(preview)}</div>` : ''}
+  `;
+}
+
+function buildFollowUpListItem(mom) {
+  const status = followUpStatus(mom.nextFollowUp);
+  const notesPreview = (mom.followUpNotes || '').slice(0, 80);
+  return `
+    <div class="mom-item-head">
+      <div class="mom-item-title">${esc(mom.title || 'Untitled Meeting')}</div>
+      <span class="followup-badge ${status}">${followUpStatusLabel(status)}</span>
+    </div>
+    <div class="mom-item-meta">Follow-up · ${formatDateDisplay(mom.nextFollowUp)}</div>
+    ${notesPreview ? `<div class="mom-item-preview">${esc(notesPreview)}</div>` : ''}
+  `;
+}
+
 // ============================================================
 // RENDER SIDEBAR LIST
 // ============================================================
@@ -556,14 +646,44 @@ function renderList(query = '') {
   const container = document.getElementById('mom-list');
   container.innerHTML = '';
 
-  let items = records;
-  if (query) {
-    items = records.filter(r =>
-      (r.title      || '').toLowerCase().includes(query) ||
-      (r.attendees  || '').toLowerCase().includes(query) ||
-      (r.discussion || '').toLowerCase().includes(query)
-    );
+  if (listMode === 'followups') {
+    const items = records
+      .filter(mom => mom.nextFollowUp && matchesListQuery(mom, query))
+      .sort((a, b) => {
+        if (a.nextFollowUp === b.nextFollowUp) {
+          return (b.updatedAt || '').localeCompare(a.updatedAt || '');
+        }
+        return a.nextFollowUp.localeCompare(b.nextFollowUp);
+      });
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="no-results">${
+        query ? 'No follow-ups found' : 'No follow-ups scheduled'
+      }</div>`;
+      return;
+    }
+
+    let lastStatus = '';
+    items.forEach(mom => {
+      const status = followUpStatus(mom.nextFollowUp);
+      if (status !== lastStatus) {
+        const group = document.createElement('div');
+        group.className = 'list-group-label';
+        group.textContent = followUpStatusLabel(status);
+        container.appendChild(group);
+        lastStatus = status;
+      }
+
+      const div = document.createElement('div');
+      div.className = 'mom-item followup-item' + (mom.id === activeId ? ' active' : '');
+      div.onclick = () => { loadEditor(mom.id); closeSidebar(); };
+      div.innerHTML = buildFollowUpListItem(mom);
+      container.appendChild(div);
+    });
+    return;
   }
+
+  let items = records.filter(mom => matchesListQuery(mom, query));
 
   if (items.length === 0) {
     container.innerHTML = '<div class="no-results">No meetings found</div>';
@@ -574,13 +694,7 @@ function renderList(query = '') {
     const div = document.createElement('div');
     div.className = 'mom-item' + (mom.id === activeId ? ' active' : '');
     div.onclick = () => { loadEditor(mom.id); closeSidebar(); };
-
-    const preview = (mom.discussion || '').slice(0, 60);
-    div.innerHTML = `
-      <div class="mom-item-title">${esc(mom.title || 'Untitled Meeting')}</div>
-      <div class="mom-item-meta">${formatDate(mom.date)}${mom.time ? ' · ' + mom.time : ''}</div>
-      ${preview ? `<div class="mom-item-preview">${esc(preview)}</div>` : ''}
-    `;
+    div.innerHTML = buildDefaultListItem(mom);
     container.appendChild(div);
   });
 }

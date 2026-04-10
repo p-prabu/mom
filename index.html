@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 
-<body data-theme="soft">
+<body data-theme="word">
 
   <!-- ── Mobile hamburger ── -->
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
@@ -30,6 +30,17 @@
              placeholder="🔍 Search meetings…"
              oninput="filterList()"
              autocomplete="off">
+    </div>
+
+    <div class="list-mode-switch" aria-label="Meeting list mode">
+      <button id="list-mode-all"
+              class="list-mode-btn active"
+              type="button"
+              onclick="setListMode('all')">All Meetings</button>
+      <button id="list-mode-followups"
+              class="list-mode-btn"
+              type="button"
+              onclick="setListMode('followups')">Follow-ups</button>
     </div>
 
     <!-- Meeting list -->
