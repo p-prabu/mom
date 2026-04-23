@@ -179,7 +179,7 @@ Clicking an item loads it into the editor. Active item is highlighted.
 ## Themes — 2 options
 
 1. `Word` — default theme, inspired by Microsoft Word with a white document page, quiet gray chrome, and Office-style blue accents
-2. `Dark` — dark workspace variant with the same structure and interactions
+2. `Dark` — true dark workspace variant with near-black backgrounds, white text, and restrained monochrome accents that are easy on the eyes
 
 Theme toggle button in sidebar bottom. Cycles through the 2 themes. Saved to localStorage.
 
@@ -213,7 +213,7 @@ When no MoM exists or none is selected, show a centered message in the editor pa
 - Keep the editor readable and page-like rather than full-width edge-to-edge
 - Use subtle shadows, practical borders, and strong readability
 - Preserve the custom sidebar and follow-up workflow
-- Active items and focus states should use clear blue accents
+- Active items and focus states should stay clear, but the dark theme should rely on white/light contrast instead of bright blue emphasis
 - Mobile: sidebar hidden by default, hamburger menu reveals it
 
 ---

@@ -68,34 +68,34 @@
 
 /* ── Dark Theme ── */
 [data-theme="dark"] {
-  --bg-base:        #08111d;
-  --bg-radial-a:    rgba(67, 108, 184, 0.34);
-  --bg-radial-b:    rgba(29, 113, 112, 0.24);
-  --bg-radial-c:    rgba(16, 26, 45, 0.20);
-  --sidebar-bg:     rgba(11, 20, 36, 0.72);
-  --editor-bg:      rgba(11, 18, 32, 0.76);
-  --surface-strong: rgba(18, 31, 52, 0.84);
-  --surface-soft:   rgba(18, 31, 52, 0.58);
-  --surface-tint:   rgba(97, 140, 255, 0.12);
-  --text-primary:   #edf4ff;
-  --text-secondary: #bfd0e6;
-  --text-muted:     #8da4c2;
-  --accent:         #73abff;
-  --accent-strong:  #4f8cff;
-  --accent-soft:    rgba(115, 171, 255, 0.16);
-  --border:         rgba(167, 194, 227, 0.14);
-  --border-strong:  rgba(167, 194, 227, 0.24);
-  --hover-bg:       rgba(32, 49, 78, 0.72);
-  --active-bg:      rgba(55, 86, 141, 0.42);
-  --btn-bg:         rgba(20, 33, 55, 0.72);
-  --btn-hover:      rgba(31, 48, 77, 0.86);
-  --action-border:  rgba(167, 194, 227, 0.10);
-  --overlay-bg:     rgba(4, 10, 18, 0.62);
-  --glow:           0 18px 42px rgba(8, 14, 26, 0.34);
-  --shadow-xl:      0 28px 100px rgba(0, 0, 0, 0.40);
-  --shadow-lg:      0 20px 56px rgba(0, 0, 0, 0.28);
-  --shadow-md:      0 12px 34px rgba(0, 0, 0, 0.24);
-  --shadow-sm:      0 6px 18px rgba(0, 0, 0, 0.18);
+  --bg-base:        #07090c;
+  --bg-radial-a:    rgba(255, 255, 255, 0.03);
+  --bg-radial-b:    rgba(255, 255, 255, 0.02);
+  --bg-radial-c:    rgba(255, 255, 255, 0.015);
+  --sidebar-bg:     rgba(10, 12, 15, 0.94);
+  --editor-bg:      rgba(13, 15, 18, 0.96);
+  --surface-strong: rgba(21, 24, 28, 0.98);
+  --surface-soft:   rgba(17, 20, 24, 0.88);
+  --surface-tint:   rgba(255, 255, 255, 0.02);
+  --text-primary:   #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.82);
+  --text-muted:     rgba(255, 255, 255, 0.58);
+  --accent:         #ffffff;
+  --accent-strong:  #ffffff;
+  --accent-soft:    rgba(255, 255, 255, 0.12);
+  --border:         rgba(255, 255, 255, 0.10);
+  --border-strong:  rgba(255, 255, 255, 0.18);
+  --hover-bg:       rgba(255, 255, 255, 0.07);
+  --active-bg:      rgba(255, 255, 255, 0.10);
+  --btn-bg:         rgba(18, 21, 25, 0.94);
+  --btn-hover:      rgba(28, 32, 38, 0.98);
+  --action-border:  rgba(255, 255, 255, 0.08);
+  --overlay-bg:     rgba(0, 0, 0, 0.74);
+  --glow:           0 12px 26px rgba(0, 0, 0, 0.28);
+  --shadow-xl:      0 24px 68px rgba(0, 0, 0, 0.46);
+  --shadow-lg:      0 16px 40px rgba(0, 0, 0, 0.34);
+  --shadow-md:      0 10px 22px rgba(0, 0, 0, 0.26);
+  --shadow-sm:      0 5px 12px rgba(0, 0, 0, 0.22);
 }
 
 /* ============================================================
@@ -1738,6 +1738,61 @@ textarea::placeholder { color: var(--text-muted); opacity: 0.55; }
 .copy-toast.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+body[data-theme="dark"] .followup-badge,
+body[data-theme="dark"] .task-status-badge {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+body[data-theme="dark"] .followup-badge.overdue,
+body[data-theme="dark"] .followup-badge.today,
+body[data-theme="dark"] .followup-badge.upcoming,
+body[data-theme="dark"] .task-status-badge.overdue,
+body[data-theme="dark"] .task-status-badge.today,
+body[data-theme="dark"] .task-status-badge.upcoming,
+body[data-theme="dark"] .task-status-badge.nodue {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+body[data-theme="dark"] #new-btn,
+body[data-theme="dark"] .toolbar-btn-accent {
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+  border-color: rgba(255,255,255,0.18);
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+
+body[data-theme="dark"] #new-btn:hover,
+body[data-theme="dark"] .toolbar-btn-accent:hover,
+body[data-theme="dark"] .modal-btn.primary:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.09));
+  color: #ffffff;
+}
+
+body[data-theme="dark"] .task-dashboard-group-open,
+body[data-theme="dark"] .task-item-check,
+body[data-theme="dark"] .task-dashboard-item-check,
+body[data-theme="dark"] .action-checkbox:checked + .action-check-ui {
+  background: #ffffff;
+  color: #0b0d10;
+  border-color: rgba(255,255,255,0.22);
+}
+
+body[data-theme="dark"] .task-item-check,
+body[data-theme="dark"] .task-dashboard-item-check {
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
+}
+
+body[data-theme="dark"] .copy-toast,
+body[data-theme="dark"] #undo-banner {
+  background: linear-gradient(180deg, rgba(18,20,24,0.98), rgba(10,12,15,0.98));
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.12);
 }
 
 /* ============================================================

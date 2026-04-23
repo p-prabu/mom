@@ -82,6 +82,6 @@ Each action item includes:
 - Data is stored per browser on the local machine
 - Import/export is the current backup and transfer mechanism
 - PDF export uses the browser print dialog with a print-optimized document layout
-- The default theme is `word`, with `dark` as the second theme option
+- The default theme is `word`, with `dark` as a true dark alternative using near-black surfaces and white text
 - The desktop sidebar is widened to better fit `All Meetings`, `Follow-ups`, and `Tasks`
 - The app is intentionally framework-free and simple to open, edit, and extend
