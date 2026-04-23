@@ -41,6 +41,10 @@
               class="list-mode-btn"
               type="button"
               onclick="setListMode('followups')">Follow-ups</button>
+      <button id="list-mode-tasks"
+              class="list-mode-btn"
+              type="button"
+              onclick="setListMode('tasks')">Tasks</button>
     </div>
 
     <!-- Meeting list -->
@@ -76,6 +80,20 @@
         <div class="empty-icon">📋</div>
         Select a meeting from the list or create a new one with<br>
         <strong>+ New MoM</strong>
+      </div>
+    </div>
+
+    <!-- Tasks dashboard -->
+    <div id="tasks-dashboard" style="display:none;">
+      <div class="tasks-dashboard-shell">
+        <div class="tasks-dashboard-head">
+          <div>
+            <div class="tasks-dashboard-kicker">Task Dashboard</div>
+            <h1 class="tasks-dashboard-title">Open Tasks</h1>
+          </div>
+          <div class="tasks-dashboard-summary" id="tasks-dashboard-summary"></div>
+        </div>
+        <div id="tasks-dashboard-list"></div>
       </div>
     </div>
 
@@ -155,6 +173,7 @@
       <div class="field-group">
         <div class="field-label">Action Items</div>
         <div class="action-header">
+          <span></span>
           <span>Task</span>
           <span class="col-owner">Owner</span>
           <span>Due Date</span>

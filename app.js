@@ -19,11 +19,33 @@ let importBuf  = null;
 
 const THEMES = ['word', 'dark'];
 
+function toBoolean(value) {
+  if (value === true || value === 'true' || value === 1 || value === '1') return true;
+  if (value === false || value === 'false' || value === 0 || value === '0' || value == null) return false;
+  return Boolean(value);
+}
+
+function normalizeAction(action = {}) {
+  return {
+    task: action.task || '',
+    owner: action.owner || '',
+    due: action.due || '',
+    completed: toBoolean(action.completed),
+  };
+}
+
+function normalizeRecord(record = {}) {
+  return {
+    ...record,
+    actions: Array.isArray(record.actions) ? record.actions.map(normalizeAction) : [],
+  };
+}
+
 // ============================================================
 // INIT
 // ============================================================
 function init() {
-  records  = JSON.parse(localStorage.getItem('mom_records') || '[]');
+  records  = JSON.parse(localStorage.getItem('mom_records') || '[]').map(normalizeRecord);
   theme    = localStorage.getItem('mom_theme')     || 'word';
   activeId = localStorage.getItem('mom_active_id') || null;
   listMode = localStorage.getItem('mom_list_mode') || 'all';
@@ -33,12 +55,22 @@ function init() {
     localStorage.setItem('mom_theme', theme);
   }
 
+  if (!['all', 'followups', 'tasks'].includes(listMode)) {
+    listMode = 'all';
+    localStorage.setItem('mom_list_mode', listMode);
+  }
+
+  persist();
+
   applyTheme();
   setupDatePickers();
   syncListModeUI();
   renderList();
+  renderTaskDashboard();
 
-  if (activeId && records.find(r => r.id === activeId)) {
+  if (listMode === 'tasks') {
+    showTaskDashboard();
+  } else if (activeId && records.find(r => r.id === activeId)) {
     loadEditor(activeId);
   } else {
     showEmptyState();
@@ -114,6 +146,56 @@ function followUpStatusLabel(status) {
     today: 'Today',
     upcoming: 'Upcoming'
   })[status] || '';
+}
+
+function taskDueStatus(dateStr) {
+  if (!dateStr) return 'nodue';
+  const today = todayDateLocal();
+  if (dateStr < today) return 'overdue';
+  if (dateStr === today) return 'today';
+  return 'upcoming';
+}
+
+function taskDueStatusLabel(status) {
+  return ({
+    overdue: 'Overdue',
+    today: 'Today',
+    upcoming: 'Upcoming',
+    nodue: 'No due date'
+  })[status] || 'No due date';
+}
+
+function taskUrgencyRank(action) {
+  return ({
+    overdue: 0,
+    today: 1,
+    upcoming: 2,
+    nodue: 3
+  })[taskDueStatus(action.due)];
+}
+
+function compareTasksByUrgency(a, b) {
+  const rankDiff = taskUrgencyRank(a) - taskUrgencyRank(b);
+  if (rankDiff !== 0) return rankDiff;
+
+  const aDue = a.due || '9999-12-31';
+  const bDue = b.due || '9999-12-31';
+  if (aDue !== bDue) return aDue.localeCompare(bDue);
+
+  return (a.task || '').localeCompare(b.task || '');
+}
+
+function compareMeetingsByTaskUrgency(a, b) {
+  const aTasks = getSortedIncompleteActions(a);
+  const bTasks = getSortedIncompleteActions(b);
+
+  const leadCompare = compareTasksByUrgency(aTasks[0], bTasks[0]);
+  if (leadCompare !== 0) return leadCompare;
+
+  const countCompare = aTasks.length - bTasks.length;
+  if (countCompare !== 0) return countCompare;
+
+  return (a.title || '').localeCompare(b.title || '');
 }
 
 // ============================================================
@@ -406,7 +488,13 @@ function createNewMoM() {
 
   records.unshift(mom);
   persist();
+  if (listMode === 'tasks') {
+    listMode = 'all';
+    localStorage.setItem('mom_list_mode', listMode);
+    syncListModeUI();
+  }
   renderList();
+  renderTaskDashboard();
   loadEditor(mom.id);
   closeSidebar();
 
@@ -426,6 +514,7 @@ function loadEditor(id) {
   activeId = id;
   localStorage.setItem('mom_active_id', id);
 
+  document.getElementById('tasks-dashboard').style.display = 'none';
   document.getElementById('empty-state').style.display  = 'none';
   document.getElementById('editor-wrap').style.display  = 'block';
 
@@ -440,9 +529,11 @@ function loadEditor(id) {
 
   renderActions(mom.actions || []);
   renderList(); // refresh active highlight
+  renderTaskDashboard(document.getElementById('search').value.toLowerCase().trim());
 }
 
 function showEmptyState() {
+  document.getElementById('tasks-dashboard').style.display = 'none';
   document.getElementById('empty-state').style.display = 'flex';
   document.getElementById('editor-wrap').style.display = 'none';
   activeId = null;
@@ -461,6 +552,7 @@ function handleChange(field, value) {
   persist();
   flashSaved();
   renderList(); // keep preview fresh
+  renderTaskDashboard(document.getElementById('search').value.toLowerCase().trim());
 }
 
 // ============================================================
@@ -473,9 +565,17 @@ function renderActions(actions) {
   actions.forEach((action, idx) => {
     const wrapId = `dp-action-${idx}`;
     const row    = document.createElement('div');
-    row.className = 'action-row';
+    row.className = 'action-row' + (action.completed ? ' completed' : '');
     row.innerHTML = `
+      <label class="action-check-wrap" title="Mark action complete">
+        <input type="checkbox"
+               class="action-checkbox"
+               ${action.completed ? 'checked' : ''}
+               onchange="toggleActionComplete(${idx}, this.checked)">
+        <span class="action-check-ui"></span>
+      </label>
       <input type="text"
+             class="action-task-input"
              placeholder="Task description"
              value="${esc(action.task || '')}"
              oninput="updateAction(${idx}, 'task', this.value)">
@@ -512,10 +612,12 @@ function renderActions(actions) {
 function addAction() {
   const mom = records.find(r => r.id === activeId);
   if (!mom) return;
-  mom.actions.push({ task: '', owner: '', due: '' });
+  mom.actions.push({ task: '', owner: '', due: '', completed: false });
   mom.updatedAt = new Date().toISOString();
   persist();
   renderActions(mom.actions);
+  renderList();
+  renderTaskDashboard(document.getElementById('search').value.toLowerCase().trim());
   flashSaved();
 
   setTimeout(() => {
@@ -530,7 +632,16 @@ function updateAction(idx, field, value) {
   mom.actions[idx][field] = value;
   mom.updatedAt = new Date().toISOString();
   persist();
+  renderList();
+  renderTaskDashboard(document.getElementById('search').value.toLowerCase().trim());
   flashSaved();
+}
+
+function toggleActionComplete(idx, completed) {
+  updateAction(idx, 'completed', completed);
+  const mom = records.find(r => r.id === activeId);
+  if (!mom) return;
+  renderActions(mom.actions);
 }
 
 function removeAction(idx) {
@@ -540,6 +651,8 @@ function removeAction(idx) {
   mom.updatedAt = new Date().toISOString();
   persist();
   renderActions(mom.actions);
+  renderList();
+  renderTaskDashboard(document.getElementById('search').value.toLowerCase().trim());
   flashSaved();
 }
 
@@ -589,22 +702,35 @@ function undoDelete() {
 function filterList() {
   const q = document.getElementById('search').value.toLowerCase().trim();
   renderList(q);
+  renderTaskDashboard(q);
 }
 
 function setListMode(mode) {
-  if (!['all', 'followups'].includes(mode) || listMode === mode) return;
+  if (!['all', 'followups', 'tasks'].includes(mode) || listMode === mode) return;
   listMode = mode;
   localStorage.setItem('mom_list_mode', listMode);
   syncListModeUI();
-  renderList(document.getElementById('search').value.toLowerCase().trim());
+  const query = document.getElementById('search').value.toLowerCase().trim();
+  renderList(query);
+  renderTaskDashboard(query);
+
+  if (listMode === 'tasks') {
+    showTaskDashboard();
+  } else if (activeId && records.find(r => r.id === activeId)) {
+    loadEditor(activeId);
+  } else {
+    showEmptyState();
+  }
 }
 
 function syncListModeUI() {
   const allBtn = document.getElementById('list-mode-all');
   const followBtn = document.getElementById('list-mode-followups');
-  if (!allBtn || !followBtn) return;
+  const tasksBtn = document.getElementById('list-mode-tasks');
+  if (!allBtn || !followBtn || !tasksBtn) return;
   allBtn.classList.toggle('active', listMode === 'all');
   followBtn.classList.toggle('active', listMode === 'followups');
+  tasksBtn.classList.toggle('active', listMode === 'tasks');
 }
 
 function matchesListQuery(mom, query) {
@@ -614,6 +740,29 @@ function matchesListQuery(mom, query) {
     mom.attendees,
     mom.discussion,
     mom.followUpNotes
+  ].some(value => (value || '').toLowerCase().includes(query));
+}
+
+function getIncompleteActions(mom) {
+  return (mom.actions || []).filter(action => !action.completed);
+}
+
+function getSortedIncompleteActions(mom) {
+  return getIncompleteActions(mom).slice().sort(compareTasksByUrgency);
+}
+
+function matchesTaskQuery(mom, query) {
+  if (!query) return true;
+
+  const taskValues = [];
+  getIncompleteActions(mom).forEach(action => {
+    taskValues.push(action.task, action.owner);
+  });
+
+  return [
+    mom.title,
+    mom.followUpNotes,
+    ...taskValues
   ].some(value => (value || '').toLowerCase().includes(query));
 }
 
@@ -637,6 +786,124 @@ function buildFollowUpListItem(mom) {
     <div class="mom-item-meta">Follow-up · ${formatDateDisplay(mom.nextFollowUp)}</div>
     ${notesPreview ? `<div class="mom-item-preview">${esc(notesPreview)}</div>` : ''}
   `;
+}
+
+function buildTaskListItem(mom) {
+  const tasks = getSortedIncompleteActions(mom);
+  const tasksHtml = tasks.map(action => {
+    const metaParts = [];
+    if (action.owner) metaParts.push(`Owner · ${esc(action.owner)}`);
+    if (action.due) metaParts.push(`Due · ${esc(formatDateDisplay(action.due))}`);
+
+    return `
+      <div class="task-item">
+        <div class="task-item-check" aria-hidden="true"></div>
+        <div class="task-item-body">
+          <div class="task-item-title">${esc(action.task || 'Untitled task')}</div>
+          ${metaParts.length ? `<div class="task-item-meta">${metaParts.join(' · ')}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="task-group-head">
+      <div class="task-group-title">${esc(mom.title || 'Untitled Meeting')}</div>
+      <div class="task-group-count">${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}</div>
+    </div>
+    <div class="task-group-items">${tasksHtml}</div>
+    ${mom.nextFollowUp ? `
+      <div class="task-group-followup">
+        <span class="task-group-followup-label">Next Follow-up</span>
+        <span class="followup-badge ${followUpStatus(mom.nextFollowUp)}">${esc(formatDateDisplay(mom.nextFollowUp))}</span>
+      </div>
+    ` : ''}
+  `;
+}
+
+function openMeetingFromTasks(id) {
+  if (!records.find(r => r.id === id)) return;
+  if (listMode === 'tasks') {
+    listMode = 'all';
+    localStorage.setItem('mom_list_mode', listMode);
+    syncListModeUI();
+  }
+  renderList(document.getElementById('search').value.toLowerCase().trim());
+  loadEditor(id);
+  closeSidebar();
+}
+
+function buildTaskDashboardSection(mom) {
+  const tasks = getSortedIncompleteActions(mom);
+  const tasksHtml = tasks.map(action => {
+    const status = taskDueStatus(action.due);
+    const meta = [];
+    if (action.owner) meta.push(`Owner · ${esc(action.owner)}`);
+    if (action.due) meta.push(`Due · ${esc(formatDateDisplay(action.due))}`);
+
+    return `
+      <button class="task-dashboard-item" type="button" onclick="openMeetingFromTasks('${mom.id}')">
+        <span class="task-dashboard-item-check" aria-hidden="true"></span>
+        <span class="task-dashboard-item-body">
+          <span class="task-dashboard-item-top">
+            <span class="task-dashboard-item-title">${esc(action.task || 'Untitled task')}</span>
+            <span class="task-status-badge ${status}">${taskDueStatusLabel(status)}</span>
+          </span>
+          ${meta.length ? `<span class="task-dashboard-item-meta">${meta.join(' · ')}</span>` : ''}
+        </span>
+      </button>
+    `;
+  }).join('');
+
+  return `
+    <section class="task-dashboard-group">
+      <button class="task-dashboard-group-head" type="button" onclick="openMeetingFromTasks('${mom.id}')">
+        <span class="task-dashboard-group-title-wrap">
+          <span class="task-dashboard-group-title">${esc(mom.title || 'Untitled Meeting')}</span>
+          <span class="task-dashboard-group-subtitle">${tasks.length} ${tasks.length === 1 ? 'active task' : 'active tasks'}</span>
+        </span>
+        <span class="task-dashboard-group-open">Open</span>
+      </button>
+      <div class="task-dashboard-group-items">${tasksHtml}</div>
+      ${mom.nextFollowUp ? `
+        <div class="task-dashboard-followup">
+          <span class="task-dashboard-followup-label">Next Follow-up</span>
+          <span class="followup-badge ${followUpStatus(mom.nextFollowUp)}">${esc(formatDateDisplay(mom.nextFollowUp))}</span>
+        </div>
+      ` : ''}
+    </section>
+  `;
+}
+
+function renderTaskDashboard(query = '') {
+  const dashboard = document.getElementById('tasks-dashboard');
+  const list = document.getElementById('tasks-dashboard-list');
+  const summary = document.getElementById('tasks-dashboard-summary');
+  if (!dashboard || !list || !summary) return;
+
+  const meetings = records
+    .filter(mom => getIncompleteActions(mom).length > 0 && matchesTaskQuery(mom, query))
+    .sort(compareMeetingsByTaskUrgency);
+  const taskCount = meetings.reduce((count, mom) => count + getIncompleteActions(mom).length, 0);
+
+  summary.textContent = taskCount
+    ? `${taskCount} ${taskCount === 1 ? 'task' : 'tasks'} across ${meetings.length} ${meetings.length === 1 ? 'meeting' : 'meetings'}`
+    : (query ? 'No matching tasks' : 'No active tasks');
+
+  if (meetings.length === 0) {
+    list.innerHTML = `<div class="tasks-dashboard-empty">${
+      query ? 'No tasks match this search.' : 'No active tasks right now.'
+    }</div>`;
+    return;
+  }
+
+  list.innerHTML = meetings.map(buildTaskDashboardSection).join('');
+}
+
+function showTaskDashboard() {
+  document.getElementById('editor-wrap').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('tasks-dashboard').style.display = 'block';
 }
 
 // ============================================================
@@ -678,6 +945,39 @@ function renderList(query = '') {
       div.className = 'mom-item followup-item' + (mom.id === activeId ? ' active' : '');
       div.onclick = () => { loadEditor(mom.id); closeSidebar(); };
       div.innerHTML = buildFollowUpListItem(mom);
+      container.appendChild(div);
+    });
+    return;
+  }
+
+  if (listMode === 'tasks') {
+    const items = records
+      .filter(mom => getIncompleteActions(mom).length > 0 && matchesTaskQuery(mom, query))
+      .sort(compareMeetingsByTaskUrgency);
+
+    if (items.length === 0) {
+      container.innerHTML = `<div class="no-results">${
+        query ? 'No tasks found' : 'No active tasks'
+      }</div>`;
+      return;
+    }
+
+    items.forEach(mom => {
+      const div = document.createElement('div');
+      div.className = 'mom-item task-sidebar-item' + (mom.id === activeId ? ' active' : '');
+      div.onclick = () => { openMeetingFromTasks(mom.id); };
+      const topTask = getSortedIncompleteActions(mom)[0];
+      const topStatus = topTask ? taskDueStatus(topTask.due) : 'nodue';
+      div.innerHTML = `
+        <div class="mom-item-head">
+          <div class="mom-item-title">${esc(mom.title || 'Untitled Meeting')}</div>
+          <span class="task-status-badge compact ${topStatus}">${taskDueStatusLabel(topStatus)}</span>
+        </div>
+        <div class="mom-item-meta">${getIncompleteActions(mom).length} ${
+          getIncompleteActions(mom).length === 1 ? 'active task' : 'active tasks'
+        }</div>
+        ${mom.nextFollowUp ? `<div class="mom-item-preview">Follow-up · ${esc(formatDateDisplay(mom.nextFollowUp))}</div>` : ''}
+      `;
       container.appendChild(div);
     });
     return;
@@ -748,8 +1048,8 @@ function importJSON(event) {
 function confirmImport() {
   if (!importBuf) return;
   const map = {};
-  records.forEach(r    => { map[r.id] = r; });
-  importBuf.forEach(r  => { map[r.id] = r; });
+  records.forEach(r    => { map[r.id] = normalizeRecord(r); });
+  importBuf.forEach(r  => { map[r.id] = normalizeRecord(r); });
 
   records = Object.values(map).sort((a, b) =>
     (b.date || '') > (a.date || '') ? 1 : -1
@@ -757,6 +1057,7 @@ function confirmImport() {
 
   persist();
   renderList();
+  renderTaskDashboard(document.getElementById('search').value.toLowerCase().trim());
   closeOverlay('import-overlay');
   importBuf = null;
 }
@@ -867,9 +1168,9 @@ function buildPrintHTML(mom) {
   if (mom.actions && mom.actions.length) {
     const rows = mom.actions.map(a => `
       <tr>
-        <td class="pv-td">${escHtml(a.task  || '')}</td>
+        <td class="pv-td">${a.completed ? '&#10003; ' : ''}${escHtml(a.task  || '')}</td>
         <td class="pv-td">${escHtml(a.owner || '')}</td>
-        <td class="pv-td">${formatDateLong(a.due) || ''}</td>
+        <td class="pv-td">${a.completed ? 'Done' : (formatDateLong(a.due) || '')}</td>
       </tr>`).join('');
     actionsHTML = `
       <div class="pv-section-title">Action Items</div>
@@ -937,9 +1238,9 @@ function buildEmailHTML(mom) {
   if (mom.actions && mom.actions.length) {
     const rows = mom.actions.map(a => `
       <tr>
-        <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;">${escHtml(a.task  || '')}</td>
+        <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;${a.completed ? 'color:#666;text-decoration:line-through;' : ''}">${a.completed ? '&#10003; ' : ''}${escHtml(a.task  || '')}</td>
         <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;">${escHtml(a.owner || '')}</td>
-        <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;white-space:nowrap;">${formatDateLong(a.due) || '—'}</td>
+        <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;white-space:nowrap;">${a.completed ? 'Done' : (formatDateLong(a.due) || '—')}</td>
       </tr>`).join('');
     actionsHTML = `
       <h3 style="font-family:sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#555;margin:20px 0 6px;">Action Items</h3>
@@ -1007,9 +1308,10 @@ function buildEmailText(mom) {
     lines.push('ACTION ITEMS');
     lines.push('------------');
     mom.actions.forEach((a, i) => {
-      const due = a.due ? ` (Due: ${formatDateLong(a.due)})` : '';
+      const due = a.completed ? ' (Done)' : (a.due ? ` (Due: ${formatDateLong(a.due)})` : '');
       const owner = a.owner ? ` — ${a.owner}` : '';
-      lines.push(`${i + 1}. ${a.task || ''}${owner}${due}`);
+      const prefix = a.completed ? '[x]' : '[ ]';
+      lines.push(`${i + 1}. ${prefix} ${a.task || ''}${owner}${due}`);
     });
     lines.push('');
   }

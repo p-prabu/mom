@@ -19,7 +19,7 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 │  [+ New MoM]    │  Meeting Title                       │
 │                 │  Date & Time   Attendees             │
 │  🔍 Search      │  PDF / Copy for Email / Plain Text   │
-│  [All|Followup] │                                      │
+│ [All|Follow|Task]                                      │
 │                 │  Discussion Notes (big textarea)     │
 │  ─────────────  │                                      │
 │  Apr 9 · Sprint │  Action Items                        │
@@ -32,7 +32,7 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 └─────────────────┴──────────────────────────────────────┘
 ```
 
-- Left sidebar: fixed width ~260px, scrollable meeting list, search box at top, list-mode toggle under search, Export/Import/Theme/Help at bottom
+- Left sidebar: fixed desktop width ~290px, scrollable meeting list, search box at top, list-mode toggle under search, Export/Import/Theme/Help at bottom
 - Right panel: the active MoM editor as a document-style workspace, scrollable
 - Responsive: on mobile, sidebar collapses and editor takes full width
 
@@ -45,7 +45,7 @@ Create a single `index.html` file with embedded CSS and JavaScript. No framework
 3. `Time` — custom time picker, auto-filled to current time
 4. `Attendees` — single text input, comma-separated names
 5. `Discussion Notes` — large textarea, min 6 rows, grows with content
-6. `Action Items` — dynamic rows, each row has: Task (text) + Owner (text) + Due Date (custom date picker) + Delete button. A `+ Add Action Item` button appends a new empty row
+6. `Action Items` — dynamic rows, each row has: Complete checkbox + Task (text) + Owner (text) + Due Date (custom date picker) + Delete button. A `+ Add Action Item` button appends a new empty row
 7. `Next Follow-up` — custom date picker
 8. `Follow-up Notes` — small textarea, 2 rows
 
@@ -59,7 +59,7 @@ Save to localStorage on every keystroke / change event. Never show a manual save
 
 ## Sidebar list modes
 
-The sidebar supports two modes:
+The sidebar supports three modes:
 
 1. `All Meetings`
    - Shows all meeting records
@@ -70,6 +70,14 @@ The sidebar supports two modes:
    - Sorted by follow-up date ascending
    - Grouped into `Overdue`, `Today`, and `Upcoming`
    - Each item shows title, follow-up date, and optional follow-up notes preview
+
+3. `Tasks`
+   - Shows only meetings with at least one incomplete action item
+   - Loads a main-panel task dashboard rather than using the sidebar as the primary display
+   - Groups action items by meeting title
+   - Sorts tasks by urgency: `Overdue`, `Today`, `Upcoming`, then `No due date`
+   - Shows active task text, owner, due date, and a task status badge
+   - Shows the meeting's `Next Follow-up Date` once per meeting group when set
 
 Clicking an item loads it into the editor. Active item is highlighted.
 
@@ -94,6 +102,7 @@ Clicking an item loads it into the editor. Active item is highlighted.
 
 - Search box in sidebar filters the list in real time
 - Matches against title, attendees, discussion notes, and follow-up notes
+- In `Tasks` mode, search also matches task text and task owner
 - No results state: show `No meetings found`
 - In follow-up mode with no dated items, show `No follow-ups scheduled`
 
@@ -125,6 +134,15 @@ Clicking an item loads it into the editor. Active item is highlighted.
 
 ---
 
+## Action item completion
+
+- Each action item has a checkbox to mark it complete
+- Completed items remain visible for meeting history
+- Completed items should appear visually dimmed / struck through
+- Completed items should not need to be deleted just to show they are done
+
+---
+
 ## Data structure per MoM
 
 ```json
@@ -136,7 +154,7 @@ Clicking an item loads it into the editor. Active item is highlighted.
   "attendees": "Prabu, Anna, Marcus",
   "discussion": "Reviewed last sprint velocity...",
   "actions": [
-    { "task": "Update firewall rules", "owner": "Prabu", "due": "2026-04-15" }
+    { "task": "Update firewall rules", "owner": "Prabu", "due": "2026-04-15", "completed": false }
   ],
   "nextFollowUp": "2026-04-16",
   "followUpNotes": "Check with team on blocker",
