@@ -18,7 +18,7 @@ MoM is a lightweight Minutes of Meeting web app built with plain HTML, CSS, and 
 - Export the current meeting as a printable PDF via the browser print flow
 - Copy the current meeting as rich email HTML or plain text
 - Delete meetings with undo support
-- Switch between `word` and `dark` themes
+- Switch between `light`, `dark`, and `softdark` themes
 - Use keyboard shortcuts for common actions
 - Responsive layout with a collapsible sidebar on mobile
 - Custom date and time pickers in the browser UI
@@ -82,6 +82,6 @@ Each action item includes:
 - Data is stored per browser on the local machine
 - Import/export is the current backup and transfer mechanism
 - PDF export uses the browser print dialog with a print-optimized document layout
-- The default theme is `word`, with `dark` as a true dark alternative using near-black surfaces and white text
+- The default theme is `softdark`, with `light` and `dark` available as the other ITSM-style themes
 - The desktop sidebar is widened to better fit `All Meetings`, `Follow-ups`, and `Tasks`
 - The app is intentionally framework-free and simple to open, edit, and extend

@@ -176,12 +176,13 @@ Clicking an item loads it into the editor. Active item is highlighted.
 
 ---
 
-## Themes — 2 options
+## Themes — 3 options
 
-1. `Word` — default theme, inspired by Microsoft Word with a white document page, quiet gray chrome, and Office-style blue accents
-2. `Dark` — true dark workspace variant with near-black backgrounds, white text, and restrained monochrome accents that are easy on the eyes
+1. `Light` — bright ITSM-style theme with soft blue gradients, glassy white panels, and blue accents
+2. `Dark` — midnight ITSM-style theme with deep blue-black backgrounds and bright cyan accents
+3. `Soft Dark` — softer dark ITSM-style theme with teal accents and a slightly warmer contrast balance
 
-Theme toggle button in sidebar bottom. Cycles through the 2 themes. Saved to localStorage.
+Theme toggle button in sidebar bottom. Cycles through the 3 themes. Saved to localStorage.
 
 ---
 
@@ -208,12 +209,11 @@ When no MoM exists or none is selected, show a centered message in the editor pa
 
 ## Design principles
 
-- Main theme direction: document workspace with polished modern chrome
-- Default feeling should be familiar to office users, especially in the `Word` theme
+- Main theme direction: polished ITSM-style workspace chrome
 - Keep the editor readable and page-like rather than full-width edge-to-edge
 - Use subtle shadows, practical borders, and strong readability
 - Preserve the custom sidebar and follow-up workflow
-- Active items and focus states should stay clear, but the dark theme should rely on white/light contrast instead of bright blue emphasis
+- Active items and focus states should be clear and consistent across all 3 themes
 - Mobile: sidebar hidden by default, hamburger menu reveals it
 
 ---

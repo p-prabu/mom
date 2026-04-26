@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 
-<body data-theme="word">
+<body data-theme="softdark">
 
   <!-- ── Mobile hamburger ── -->
   <button id="hamburger" onclick="toggleSidebar()" aria-label="Open menu">☰</button>
@@ -52,12 +52,19 @@
 
     <!-- Bottom actions -->
     <div class="sidebar-bottom">
+      <div class="sidebar-appearance">
+        <div class="sidebar-section-label">Appearance</div>
+        <div class="theme-selector" aria-label="Theme">
+          <button class="theme-btn light" id="theme-light" type="button" onclick="setTheme('light')">Pearl Grid</button>
+          <button class="theme-btn dark" id="theme-dark" type="button" onclick="setTheme('dark')">Midnight Grid</button>
+          <button class="theme-btn softdark" id="theme-softdark" type="button" onclick="setTheme('softdark')">Nova 2050</button>
+        </div>
+      </div>
       <div class="sidebar-row">
         <button class="sidebar-btn" onclick="exportJSON()">⬇ Export</button>
         <button class="sidebar-btn" onclick="document.getElementById('import-file').click()">⬆ Import</button>
       </div>
       <div class="sidebar-row">
-        <button class="sidebar-btn" onclick="cycleTheme()">🎨 Theme</button>
         <button class="sidebar-btn" onclick="showShortcuts()">⌨ Help</button>
       </div>
     </div>

@@ -10,14 +10,19 @@
 // ============================================================
 let records    = [];
 let activeId   = null;
-let theme      = 'word';
+let theme      = 'softdark';
 let listMode   = 'all';
 let saveTimer  = null;
 let undoTimer  = null;
 let deletedMoM = null;
 let importBuf  = null;
 
-const THEMES = ['word', 'dark'];
+const THEMES = ['light', 'dark', 'softdark'];
+const THEME_LABELS = {
+  light: 'Pearl Grid',
+  dark: 'Midnight Grid',
+  softdark: 'Nova 2050',
+};
 
 function toBoolean(value) {
   if (value === true || value === 'true' || value === 1 || value === '1') return true;
@@ -46,12 +51,12 @@ function normalizeRecord(record = {}) {
 // ============================================================
 function init() {
   records  = JSON.parse(localStorage.getItem('mom_records') || '[]').map(normalizeRecord);
-  theme    = localStorage.getItem('mom_theme')     || 'word';
+  theme    = localStorage.getItem('mom_theme')     || 'softdark';
   activeId = localStorage.getItem('mom_active_id') || null;
   listMode = localStorage.getItem('mom_list_mode') || 'all';
 
   if (!THEMES.includes(theme)) {
-    theme = 'word';
+    theme = 'softdark';
     localStorage.setItem('mom_theme', theme);
   }
 
@@ -84,13 +89,26 @@ function init() {
 // ============================================================
 function applyTheme() {
   document.body.setAttribute('data-theme', theme);
+  syncThemeUI();
+}
+
+function syncThemeUI() {
+  THEMES.forEach(name => {
+    const btn = document.getElementById(`theme-${name}`);
+    if (btn) btn.classList.toggle('active', name === theme);
+  });
+}
+
+function setTheme(nextTheme) {
+  if (!THEMES.includes(nextTheme)) return;
+  theme = nextTheme;
+  localStorage.setItem('mom_theme', theme);
+  applyTheme();
 }
 
 function cycleTheme() {
   const i = THEMES.indexOf(theme);
-  theme = THEMES[(i + 1) % THEMES.length];
-  localStorage.setItem('mom_theme', theme);
-  applyTheme();
+  setTheme(THEMES[(i + 1) % THEMES.length]);
 }
 
 // ============================================================
